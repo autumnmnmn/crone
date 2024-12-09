@@ -1,13 +1,5 @@
 
-#include "crone_util.h"
-
-typedef struct ptr_list {
-    size_t count;
-    size_t capacity;
-    void* *data;
-} ptr_list;
-
-static inline ptr_list ptrs_allocate(size_t initial_capacity) {
+extern inline ptr_list ptrs_allocate(size_t initial_capacity) {
     ptr_list list = {
         .count = 0,
         .capacity = initial_capacity,
@@ -40,7 +32,7 @@ void ptrs_append(ptr_list *list, void *item) {
     list->data[list->count - 1] = item;
 }
 
-static inline void ptrs_cleanup(ptr_list list) {
+extern inline void ptrs_cleanup(ptr_list list) {
     free(list.data);
 }
 

@@ -5,13 +5,14 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#include <core.h>
 #include <window.h>
-#include <crone_util.h>
 
 typedef struct XWindow {
     Window window;
     Display *display;
     Atom wmDeleteMessage;
+    XVisualInfo visualInfo;
     bool shouldClose;
 } XWindow;
 
@@ -56,8 +57,9 @@ void* window_getWindow() {
     ptr -> window = window;
     ptr -> display = display;
     ptr -> wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False); // TODO what is this
+    ptr -> visualInfo = visualInfo;
     ptr -> shouldClose = false;
-    // events
+    // TODO queue for events
 
     XSetWMProtocols(display, window, &ptr->wmDeleteMessage, 1); // TODO ??
 
@@ -84,5 +86,17 @@ inline void window_cleanup(void *window_void) {
     XDestroyWindow(window->display, window->window);
     XCloseDisplay(window->display);
     free(window);
+}
+
+inline void* window_display_ptr(void *window_void) {
+    return ((XWindow *)window_void)->display;
+}
+
+inline void* window_window_ptr(void *window_void) {
+    return &(((XWindow *)window_void)->window);
+}
+
+inline void* window_visual_id_ptr(void *window_void) {
+    return &(((XWindow *)window_void)->visualInfo.visualid);
 }
 

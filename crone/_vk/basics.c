@@ -1,23 +1,9 @@
 
-#include <stdlib.h>
-
-#include <vulkan/vulkan.h>
-
-#include <vk.h>
-#include <crone_util.h>
-#include <ptr_list.h>
+#include ".h"
 
 #ifdef DO_VALIDATION
 #include "debug.h"
 #endif
-#include "macros.h"
-
-typedef struct vulkan_state {
-    VkInstance instance;
-    ptr_list physicalDevices;
-    VkDebugUtilsMessengerEXT debugMessenger;
-    VkAllocationCallbacks *pAllocator;
-} vulkan_state;
 
 ptr_list getRequiredExtensions() {
     ptr_list list = ptrs_allocate(4);
@@ -27,11 +13,12 @@ ptr_list getRequiredExtensions() {
     #endif
 
     ptrs_append(&list, "VK_KHR_surface");
+
+    #ifdef USE_X11
     ptrs_append(&list, "VK_KHR_xlib_surface");
+    #endif
     return list;
 }
-
-const char* validationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
 void* vulkan_init() {
     vulkan_state *vk = malloc(sizeof(vulkan_state));

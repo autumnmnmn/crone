@@ -2,9 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-const char* const requestedLayers[] = {
-    "VK_LAYER_KHRONOS_validation"
-};
+const char* validationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
 static bool validationLayersSupported() {
     uint32_t layerCount;
@@ -13,11 +11,11 @@ static bool validationLayersSupported() {
     VkLayerProperties availableLayers[layerCount];
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers);
 
-    size_t requestedLayerCount = sizeof(requestedLayers) / sizeof(const char*);
+    size_t requestedLayerCount = sizeof(validationLayers) / sizeof(const char*);
 
     for (int reqIndex = 0; reqIndex < requestedLayerCount; ++reqIndex) {
         bool layerFound = false;
-        const char* layerName = requestedLayers[reqIndex];
+        const char* layerName = validationLayers[reqIndex];
 
         for (int availIndex = 0; availIndex < layerCount; ++availIndex) {
             VkLayerProperties layer = availableLayers[availIndex];
