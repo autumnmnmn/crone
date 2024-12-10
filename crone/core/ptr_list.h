@@ -13,7 +13,7 @@ void ptrs_append(ptr_list *list, void *item) {
     list->count += 1;
     if (list->count > list->capacity) {
         /*========* Next power of two *========*/
-        --list->capacity;
+        list->capacity = list->count;
         list->capacity |= list->capacity >> 1;
         list->capacity |= list->capacity >> 2;
         list->capacity |= list->capacity >> 4;
