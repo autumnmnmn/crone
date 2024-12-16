@@ -20,7 +20,7 @@ ptr_list getRequiredExtensions() {
     return list;
 }
 
-void* vulkan_init() {
+vulkan_handle vulkan_init() {
     vulkan_state *vk = malloc(sizeof(vulkan_state));
     if (vk == NULL) { CRASH("failed malloc: vulkan state"); }
 
@@ -93,9 +93,8 @@ void* vulkan_init() {
     return vk;
 }
 
-void vulkan_cleanup(void *vk_vp) {
-    vulkan_state *vk = vk_vp;
-
+void vulkan_cleanup(vulkan_handle handle) {
+    vulkan_state *vk = handle;
 
     #ifdef DO_VALIDATION
     PFN_vkDestroyDebugUtilsMessengerEXT destroyFn = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(vk->instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -109,13 +108,5 @@ void vulkan_cleanup(void *vk_vp) {
 
     ptrs_cleanup(vk->physicalDevices);
     free(vk);
-}
-
-void* graphics_init(void *vk, void *window) {
-    return NULL;
-}
-
-void graphics_cleanup(void *graphics) {
-
 }
 

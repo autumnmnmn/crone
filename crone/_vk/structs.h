@@ -8,3 +8,7 @@ typedef struct vulkan_state {
     #endif
 } vulkan_state;
 
+typedef struct graphics_state {
+    vulkan_handle vulkan;
+    window_handle window;
+} graphics_state;

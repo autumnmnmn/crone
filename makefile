@@ -9,7 +9,7 @@ PROJECT_NAME = crone
 
 LINKS = -lX11 -lvulkan
 HEADERS = -I $(PROJECT_NAME)/interface
-ERRORS = -Wfatal-errors -Wall -Werror=use-after-free -Wno-unused-variable
+ERRORS = -Wfatal-errors -Wall -Werror=use-after-free -Wno-unused-variable -Wpedantic
 %_dev: VERSION_FLAGS = -Og -DDO_VALIDATION
 %_release: VERSION_FLAGS = -O3
 FLAGS = -std=c23 $(ERRORS) $(VERSION_FLAGS) $(HEADERS) -DUSE_X11
@@ -17,7 +17,7 @@ FLAGS = -std=c23 $(ERRORS) $(VERSION_FLAGS) $(HEADERS) -DUSE_X11
 GCC = gcc $(FLAGS) -o
 
 define MAKE_OBJECT
-	@echo "making $@"
+	@echo "[makefile] making $@"
 	@$(GCC) $@ $^ -c
 endef
 
@@ -28,7 +28,7 @@ endef
 	@sed 's/\(.*\) \(.*\)/$$(OBJECT_DIR)\/\2_%: \1\n\t$$(MAKE_OBJECT)/g' .temp/build_plan > $@
 	@echo -n ".temp/lib_%: " >> $@
 	@sed 's/.* \(.*\)/$$(OBJECT_DIR)\/\1_%/g' .temp/build_plan | tr "\n" " " >> $@
-	@echo -n -e "\n\t@echo \"linking \$$@\"" >> $@
+	@echo -n -e "\n\t@echo \"[.temp/make] linking \$$@\"" >> $@
 	@echo -n -e "\n\t@ld -r -o \$$@ $$^" >> $@
 
 ifneq ("$(wildcard .temp)","")
@@ -43,7 +43,7 @@ endif
 %_dev: %
 %_release: %
 program/$(PROJECT_NAME)_%: program.c .temp/lib_%
-	@echo "making $@"
+	@echo "[makefile] making $@"
 	@$(GCC) $@ $^ $(LINKS)
 
 .PHONY: _default dirs test clean release self objects immaculate
@@ -52,13 +52,13 @@ dirs:
 	@mkdir -p program $(OBJECT_DIR)
 
 test: objects program/$(PROJECT_NAME)_dev
-	@echo -e "\nlaunching..."
+	@echo -e "\n[makefile] launching..."
 	@program/$(PROJECT_NAME)_dev
 
 DATE := $(shell date '+%d.%m.%Y')
 release: objects program/$(PROJECT_NAME)_release
 	@cp program/$(PROJECT_NAME)_release program/$(PROJECT_NAME)_release_$(DATE)
-	@echo -e "\nbuilt program/$(PROJECT_NAME)_release_$(DATE)"
+	@echo -e "\n[makefile] built program/$(PROJECT_NAME)_release_$(DATE)"
 
 clean: dirs
 	@rm -rf ./.temp/*

@@ -40,7 +40,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL onDebugMessage(
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData) {
 
-    fprintf(stderr, "[VK_DEBUG] %s\n", pCallbackData->pMessage);
+    fprintf(stderr, "[_vk/debug.h] %s\n", pCallbackData->pMessage);
 
     return VK_FALSE;
 }

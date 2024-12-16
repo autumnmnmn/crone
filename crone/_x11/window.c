@@ -21,9 +21,7 @@ const long EVENT_MASK = StructureNotifyMask | KeyPressMask | KeyReleaseMask;
 void* window_getWindow() {
     Display *display = XOpenDisplay(nullptr);
 
-    if (display == nullptr) {
-        printf("oh no!!");
-    }
+    if (display == nullptr) { CRASH("failed to get X display"); }
 
     int screen = DefaultScreen(display);
     XVisualInfo visualInfo;
@@ -72,6 +70,7 @@ void window_pollEvents(void *window_void) {
 
     while (XCheckTypedWindowEvent(window -> display, window -> window, ClientMessage, &event)) {
         if (event.xclient.data.l[0] == window -> wmDeleteMessage) {
+            fprintf(stderr, "[_x11/window.c] window close requested\n");
             window -> shouldClose = true;
         }
     }
