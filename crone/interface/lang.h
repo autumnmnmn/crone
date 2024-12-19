@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <core.h>
 
-void execute(char *crone_script, size_t length);
+void execute_crone(string crone_script);
 

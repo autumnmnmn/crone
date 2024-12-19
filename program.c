@@ -11,7 +11,8 @@
 #include <crone.h>
 
 int main() {
-    int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
+    //int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
+    int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);
 
     if (fileDesc == -1) {
         CRASH("bad file");
@@ -30,7 +31,12 @@ int main() {
         CRASH("bad mmap");
     }
 
-    execute(file, fileStat.st_size);
+    string script = {
+        .data = file,
+        .length = fileStat.st_size
+    };
+
+    execute_crone(script);
 
     result = munmap(file, fileStat.st_size);
 

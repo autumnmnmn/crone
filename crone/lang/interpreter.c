@@ -1,15 +1,16 @@
 
 #include <unistd.h>
 #include <ctype.h>
+#include <string.h>
 
 #include <lang.h>
 #include <core.h>
 
 #define STATES(OP) \
+    OP(INVALID) \
     OP(OUTER_SPACE) \
     OP(TERM) \
-    OP(PRELUDIC_SPACE) \
-    OP(PRELUDE) \
+    OP(INNER_SPACE) \
     OP(BLOCK) \
 
 #define COMMA_SEPARATED(VALUE) VALUE,
@@ -24,141 +25,126 @@ static const char *state_names[] = {
 };
 
 void print_substring(char *start, size_t length) {
-    fprintf(stderr, "%.*s", (int)length, start);
-}
-
-bool ends_prelude(char c) {
-    return c == ';' || c == '{';
-}
-
-bool starts_term(char c) {
-    return !isspace(c);
-}
-
-bool ends_term(char c) {
-    return isspace(c);
-}
-
-bool ends_block(char c) {
-
-    return c == '}';
+    for (size_t i = 0; i < length; ++i) {
+        if (start[i] == '\n') {
+            fputc('\\', stderr);
+            fputc('n', stderr);
+        } else {
+            fputc(start[i], stderr);
+        }
+    }
 }
 
 typedef struct parse {
     char *start;
     size_t length;
     parser_state parsed_as;
-    void *subparse;
+    list subparses;
 } parse;
 
-void print_parse(parse p) {
+const char *spaces = "                                ";
+
+void print_parse(parse p, size_t indent) {
+    size_t space_count = 4 * indent;
+    if (space_count > strlen(spaces)) {
+        space_count = strlen(spaces);
+    }
+    fwrite(spaces, 1, space_count, stderr);
     fprintf(stderr, "parsed as %s: \"", state_names[p.parsed_as]);
     print_substring(p.start, p.length);
     fprintf(stderr, "\"\n");
 }
 
-void execute(char *crone_script, size_t length) {
+inline void transition(list *l, parse *p, char *end_position, parser_state next_state) {
+    p->length = (size_t)end_position - (size_t)(p->start);
+    list_append(l,p);
+    p->start = end_position;
+    p->parsed_as = next_state;
+}
 
-    parser_state state = OUTER_SPACE;
+// TODO UNICODE
 
-    ptr_list substrings = ptrs_allocate(512);
+list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
+    list parses = list_allocate(512, sizeof(parse));
 
-    char *start = crone_script;
+    parse current_parse;
 
-    size_t sublength = 0;
+    current_parse.start = crone_script.data + (*p_position);
+    current_parse.parsed_as = OUTER_SPACE;
 
-    for (size_t index = 0; index < length; ++index) {
-        // TODO: actual unicode parsing lol
-        char _char = crone_script[index];
-        switch (state) {
-            // TODO: simplify entire state machine to be less repetitive
+    #define NEXT(state) transition(&parses, &current_parse, crone_script.data + (*p_position), state)
+
+    // optimize w/ computed goto?
+
+    for (; (*p_position) < crone_script.length; ++(*p_position)) {
+        char _char = crone_script.data[*p_position];
+        switch (current_parse.parsed_as) {
             case OUTER_SPACE:
-                if (starts_term(_char)) {
-                    parse *p = malloc(sizeof(parse));
-                    p->start = start;
-                    p->length = sublength;
-                    p->parsed_as = state;
-                    ptrs_append(&substrings, p);
-                    start = (void*)(crone_script + index);
-                    sublength = 0;
-                    state = TERM;
-                } else {
-                    ++sublength;
+                if (_char == '}') {
+                    NEXT(INVALID);
+                } else if (!isspace(_char)) {
+                    NEXT(TERM);
                 }
             break;
-            case PRELUDIC_SPACE:
-                ++sublength;
-                if (starts_term(_char)) {
-                    parse *p = malloc(sizeof(parse));
-                    p->start = start;
-                    p->length = sublength;
-                    p->parsed_as = state;
-                    ptrs_append(&substrings, p);
-                    start = (void*)(crone_script + index);
-                    sublength = 0;
-                    state = PRELUDE;
+            case INNER_SPACE:
+                if (_char == '{') {
+                    NEXT(BLOCK);
+                } else if (_char == ';') {
+                    ++(*p_position);
+                    NEXT(OUTER_SPACE);
+                } else if (_char == '}') {
+                    NEXT(INVALID);
+                } else if (!isspace(_char)) {
+                    NEXT(TERM);
                 }
             break;
             case TERM:
-                ++sublength;
-                if (ends_term(_char)) {
-                    parse *p = malloc(sizeof(parse));
-                    p->start = start;
-                    p->length = sublength;
-                    p->parsed_as = state;
-                    ptrs_append(&substrings, p);
-                    start = (void*)(crone_script + index);
-                    sublength = 0;
-                    state = PRELUDIC_SPACE;
-                }
-            break;
-            case PRELUDE:
-                ++sublength;
-                if (ends_prelude(_char)) {
-                    parse *p = malloc(sizeof(parse));
-                    p->start = start;
-                    p->length = sublength;
-                    p->parsed_as = state;
-                    ptrs_append(&substrings, p);
-                    start = (void*)(crone_script + index);
-                    sublength = 0;
-                    state = BLOCK;
+                if (isspace(_char)) {
+                    NEXT(INNER_SPACE);
+                } else if (_char == '}') {
+                    NEXT(INVALID);
+                } else if (_char == '{') {
+                    NEXT(BLOCK);
+                } else if (_char == ';') {
+                    NEXT(OUTER_SPACE);
+                    ++(*p_position);
                 }
             break;
             case BLOCK:
                 // TODO parsing for block dependent on term and prelude
-                ++sublength;
-                if (ends_block(_char)) {
-                    parse *p = malloc(sizeof(parse));
-                    p->start = start;
-                    p->length = sublength;
-                    p->parsed_as = state;
-                    ptrs_append(&substrings, p);
-                    start = (void*)(crone_script + index);
-                    sublength = 0;
-                    state = OUTER_SPACE;
-                }
+                current_parse.subparses = parse_crone(crone_script, p_position);
+                NEXT(OUTER_SPACE);
             break;
+            case INVALID:
+                return parses;
+                break;
         }
     }
 
-    parse *p = malloc(sizeof(parse));
-    p->start = start;
-    p->length = sublength;
-    p->parsed_as = state;
-    ptrs_append(&substrings, p);
+    #undef NEXT
 
+    list_append(&parses, &current_parse);
 
-    for (int i = 0; i < substrings.count; ++i) {
-        print_parse(*(parse *)substrings.data[i]);
+    return parses;
+}
+
+void print_parses(list parses, int indent) {
+    for (int i = 0; i < parses.count; ++i) {
+        parse p = *(parse*)list_element(parses, i);
+        //if (p.parsed_as != OUTER_SPACE && p.parsed_as != INNER_SPACE) {
+            print_parse(p, indent);
+            if (p.parsed_as == BLOCK) {
+                print_parses(p.subparses, indent + 1);
+            }
+        //}
     }
+}
 
-    for (int i = 0; i < substrings.count; ++i) {
-        free(substrings.data[i]);
-    }
+void execute_crone(string crone_script) {
+    size_t position = 0;
+    list parses = parse_crone(crone_script, &position);
 
-    ptrs_cleanup(substrings);
-
+    print_parses(parses, 0);
 }
 
 /*

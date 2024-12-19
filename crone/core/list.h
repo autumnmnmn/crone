@@ -1,15 +1,16 @@
 
-ptr_list ptrs_allocate(size_t initial_capacity) {
-    ptr_list list = {
+list list_allocate(size_t initial_capacity, size_t element_size) {
+    list list = {
         .count = 0,
         .capacity = initial_capacity,
-        .data = malloc(sizeof(void*) * initial_capacity)
+        .element_size = element_size,
+        .data = malloc(element_size * initial_capacity)
     };
-    if (list.data == NULL) { CRASH("failed malloc: ptr_list"); }
+    if (list.data == NULL) { CRASH("failed malloc: list"); }
     return list;
 }
 
-void ptrs_append(ptr_list *list, void *item) {
+void list_append(list *list, void *item) {
     list->count += 1;
     if (list->count > list->capacity) {
         /*========* Next power of two *========*/
@@ -25,14 +26,18 @@ void ptrs_append(ptr_list *list, void *item) {
         ++list->capacity;
         /*=====================================*/
 
-        list->data = realloc(list->data, sizeof(void*) * list->capacity);
-        if (list->data == NULL) { CRASH("failed realloc: ptr_list"); }
+        list->data = realloc(list->data, list->element_size * list->capacity);
+        if (list->data == NULL) { CRASH("failed realloc: list"); }
     }
 
-    list->data[list->count - 1] = item;
+    memcpy(list->data + (list->count - 1) * list->element_size, item, list->element_size);
 }
 
-void ptrs_cleanup(ptr_list list) {
+void *list_element(list list, size_t index) {
+    return list.data + index * list.element_size;
+}
+
+void list_cleanup(list list) {
     free(list.data);
 }
 
