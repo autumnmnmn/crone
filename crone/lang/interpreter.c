@@ -11,6 +11,7 @@
     OP(OUTER_SPACE) \
     OP(TERM) \
     OP(INNER_SPACE) \
+    OP(PUNCTUATION) \
     OP(BLOCK) \
 
 #define COMMA_SEPARATED(VALUE) VALUE,
@@ -42,7 +43,7 @@ typedef struct parse {
     list subparses;
 } parse;
 
-const char *spaces = "                                ";
+const char *spaces = "                                            ";
 
 void print_parse(parse p, size_t indent) {
     size_t space_count = 4 * indent;
@@ -50,12 +51,16 @@ void print_parse(parse p, size_t indent) {
         space_count = strlen(spaces);
     }
     fwrite(spaces, 1, space_count, stderr);
-    fprintf(stderr, "parsed as %s: \"", state_names[p.parsed_as]);
-    print_substring(p.start, p.length);
-    fprintf(stderr, "\"\n");
+    fprintf(stderr, "%s[", state_names[p.parsed_as]);
+    if (p.parsed_as != BLOCK) {
+        print_substring(p.start, p.length);
+    } else {
+        fprintf(stderr, "%lu", p.subparses.count);
+    }
+    fprintf(stderr, "]\n");
 }
 
-inline void transition(list *l, parse *p, char *end_position, parser_state next_state) {
+void transition(list *l, parse *p, char *end_position, parser_state next_state) {
     p->length = (size_t)end_position - (size_t)(p->start);
     list_append(l,p);
     p->start = end_position;
@@ -65,7 +70,7 @@ inline void transition(list *l, parse *p, char *end_position, parser_state next_
 // TODO UNICODE
 
 list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
-    list parses = list_allocate(512, sizeof(parse));
+    list parses = list_allocate(128, sizeof(parse));
 
     parse current_parse;
 
@@ -78,10 +83,15 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
 
     for (; (*p_position) < crone_script.length; ++(*p_position)) {
         char _char = crone_script.data[*p_position];
+
         switch (current_parse.parsed_as) {
             case OUTER_SPACE:
                 if (_char == '}') {
                     NEXT(INVALID);
+                } else if (_char == '{') {
+                    NEXT(BLOCK);
+                } else if (_char == ';') {
+                    NEXT(PUNCTUATION);
                 } else if (!isspace(_char)) {
                     NEXT(TERM);
                 }
@@ -90,8 +100,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 if (_char == '{') {
                     NEXT(BLOCK);
                 } else if (_char == ';') {
-                    ++(*p_position);
-                    NEXT(OUTER_SPACE);
+                    NEXT(PUNCTUATION);
                 } else if (_char == '}') {
                     NEXT(INVALID);
                 } else if (!isspace(_char)) {
@@ -106,8 +115,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 } else if (_char == '{') {
                     NEXT(BLOCK);
                 } else if (_char == ';') {
-                    NEXT(OUTER_SPACE);
-                    ++(*p_position);
+                    NEXT(PUNCTUATION);
                 }
             break;
             case BLOCK:
@@ -115,9 +123,20 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 current_parse.subparses = parse_crone(crone_script, p_position);
                 NEXT(OUTER_SPACE);
             break;
+            case PUNCTUATION:
+                if (isspace(_char)) {
+                    NEXT(OUTER_SPACE);
+                } else if (_char == '}') {
+                    NEXT(INVALID);
+                } else if (_char == '{') {
+                    NEXT(BLOCK);
+                } else if (_char != ';') {
+                    NEXT(TERM);
+                }
+            break;
             case INVALID:
                 return parses;
-                break;
+            break;
         }
     }
 
@@ -140,11 +159,27 @@ void print_parses(list parses, int indent) {
     }
 }
 
+void cleanup_parses(list parses) {
+    for (int i = 0; i < parses.count; ++i) {
+        parse p = *(parse*)list_element(parses, i);
+        if (p.parsed_as == BLOCK) {
+            cleanup_parses(p.subparses);
+        }
+    }
+    list_cleanup(parses);
+}
+
 void execute_crone(string crone_script) {
     size_t position = 0;
     list parses = parse_crone(crone_script, &position);
 
     print_parses(parses, 0);
+
+    if (position < crone_script.length) {
+        fprintf(stderr, "warning: early exit @ %lu / %lu\n", position, crone_script.length);
+    }
+
+    cleanup_parses(parses);
 }
 
 /*

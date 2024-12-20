@@ -25,16 +25,15 @@ void list_append(list *list, void *item) {
         }
         ++list->capacity;
         /*=====================================*/
-
         list->data = realloc(list->data, list->element_size * list->capacity);
         if (list->data == NULL) { CRASH("failed realloc: list"); }
     }
 
-    memcpy(list->data + (list->count - 1) * list->element_size, item, list->element_size);
+    memcpy((uint8_t*)list->data + (list->count - 1) * list->element_size, item, list->element_size);
 }
 
 void *list_element(list list, size_t index) {
-    return list.data + index * list.element_size;
+    return (uint8_t*)list.data + index * list.element_size;
 }
 
 void list_cleanup(list list) {
