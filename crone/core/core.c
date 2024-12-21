@@ -7,4 +7,5 @@
 
 #include "ptr_list.h"
 #include "list.h"
+#include "hash.h"
 

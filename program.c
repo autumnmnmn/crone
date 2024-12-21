@@ -10,7 +10,21 @@
 
 #include <crone.h>
 
+const uint8_t test_str[15] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E
+};
+
 int main() {
+
+    string s = {
+        .data = (uint8_t*)test_str,
+        .length = 15
+    };
+
+    hash h = calculate_hash(s);
+
+    /* parser
     //int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
     int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);
 
@@ -43,10 +57,10 @@ int main() {
     if (result == -1) {
         CRASH("bad munmap");
     }
+    */
 
 
-
-    /*
+    /* graphics
     window_handle window = window_getWindow();
 
     vulkan_handle vk = vulkan_init();

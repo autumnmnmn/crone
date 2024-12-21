@@ -7,12 +7,13 @@
 #include <core.h>
 
 #define STATES(OP) \
-    OP(INVALID) \
     OP(OUTER_SPACE) \
     OP(TERM) \
-    OP(INNER_SPACE) \
     OP(PUNCTUATION) \
+    OP(INNER_SPACE) \
     OP(BLOCK) \
+    OP(EXIT_BLOCK) \
+    OP(CUSTOM) \
 
 #define COMMA_SEPARATED(VALUE) VALUE,
 #define COMMA_SEPARATED_STRINGS(VALUE) #VALUE,
@@ -25,7 +26,7 @@ static const char *state_names[] = {
     STATES(COMMA_SEPARATED_STRINGS)
 };
 
-void print_substring(char *start, size_t length) {
+void print_substring(uint8_t *start, size_t length) {
     for (size_t i = 0; i < length; ++i) {
         if (start[i] == '\n') {
             fputc('\\', stderr);
@@ -37,10 +38,11 @@ void print_substring(char *start, size_t length) {
 }
 
 typedef struct parse {
-    char *start;
+    uint8_t *start;
     size_t length;
-    parser_state parsed_as;
+    void *custom_data;
     list subparses;
+    parser_state parsed_as;
 } parse;
 
 const char *spaces = "                                            ";
@@ -60,7 +62,7 @@ void print_parse(parse p, size_t indent) {
     fprintf(stderr, "]\n");
 }
 
-void transition(list *l, parse *p, char *end_position, parser_state next_state) {
+void transition(list *l, parse *p, uint8_t *end_position, parser_state next_state) {
     p->length = (size_t)end_position - (size_t)(p->start);
     list_append(l,p);
     p->start = end_position;
@@ -87,7 +89,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
         switch (current_parse.parsed_as) {
             case OUTER_SPACE:
                 if (_char == '}') {
-                    NEXT(INVALID);
+                    NEXT(EXIT_BLOCK);
                 } else if (_char == '{') {
                     NEXT(BLOCK);
                 } else if (_char == ';') {
@@ -102,7 +104,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 } else if (_char == ';') {
                     NEXT(PUNCTUATION);
                 } else if (_char == '}') {
-                    NEXT(INVALID);
+                    NEXT(EXIT_BLOCK);
                 } else if (!isspace(_char)) {
                     NEXT(TERM);
                 }
@@ -111,7 +113,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 if (isspace(_char)) {
                     NEXT(INNER_SPACE);
                 } else if (_char == '}') {
-                    NEXT(INVALID);
+                    NEXT(EXIT_BLOCK);
                 } else if (_char == '{') {
                     NEXT(BLOCK);
                 } else if (_char == ';') {
@@ -127,15 +129,18 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
                 if (isspace(_char)) {
                     NEXT(OUTER_SPACE);
                 } else if (_char == '}') {
-                    NEXT(INVALID);
+                    NEXT(EXIT_BLOCK);
                 } else if (_char == '{') {
                     NEXT(BLOCK);
                 } else if (_char != ';') {
                     NEXT(TERM);
                 }
             break;
-            case INVALID:
+            case EXIT_BLOCK:
                 return parses;
+            break;
+            case CUSTOM:
+                CRASH("CUSTOM parser state encountered in non-custom context");
             break;
         }
     }
@@ -180,33 +185,7 @@ void execute_crone(string crone_script) {
     }
 
     cleanup_parses(parses);
+
+    fprintf(stderr, "parse size = %lu\n", sizeof(parse));
 }
-
-/*
-
-# general syntax:
-
-term prelude {
-    block
-}
-
-or
-
-term prelude;
-
-# example:
-
-## code
-exposed void ptrs_cleanup(ptr_list list) {
-    free(list.data);
-}
-
-## parse
-term="exposed"
-prelude="void ptrs_cleanup(ptr_list list)"
-block="free(list.data);"
-
-
-*/
-
 

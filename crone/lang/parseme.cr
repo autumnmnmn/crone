@@ -1,5 +1,5 @@
 
-term0 term1 term2 term3 {
+term0 term1      term2 term3 {
     block block
 
     block {
@@ -24,7 +24,23 @@ trimmed v{ lets you put some spaces on the edges, for readability }
 
 hex FF0000;
 
-no reason you {can't} keep writing after {a block};
+should i [add] alternate (forms) of "differentiated" {blocks} <and> punctuation?
+
+{
+
+    no reason you {can't} keep writing after {a block};
+
+    #=================================================#
+
+    but ideally the {
+        linter
+    }
+
+    would format it {
+        like this
+    }
+
+}
 
 extraneous punctuation;;;
 
