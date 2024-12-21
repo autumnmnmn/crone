@@ -24,6 +24,8 @@ int main() {
 
     hash h = calculate_hash(s);
 
+    fprintf(stderr, " hash: %lx \n", h);
+
     /* parser
     //int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
     int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);

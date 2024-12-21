@@ -14,101 +14,95 @@ const uint64_t init_v1 = key_1 ^ magic_number_1;
 const uint64_t init_v2 = key_0 ^ magic_number_2;
 const uint64_t init_v3 = key_1 ^ magic_number_3;
 
-const uint32_t compress_rounds = 2;
-const uint32_t finalize_rounds = 4;
-
 #define ROTL(x, r) ((x << r) | (x >> (64 - r)))
-#define ROTR(x, r) ((x >> r) | (x << (64 - r)))
+
+#define SIPROUND \
+    v0 += v1; \
+    v2 += v3; \
+    v1 = ROTL(v1, 13); \
+    v3 = ROTL(v3, 16); \
+    v1 ^= v0; \
+    v3 ^= v2; \
+    v0 = ROTL(v0, 32); \
+    v2 += v1; \
+    v0 += v3; \
+    v1 = ROTL(v1, 17); \
+    v3 = ROTL(v3, 21); \
+    v1 ^= v2; \
+    v3 ^= v0; \
+    v2 = ROTL(v2, 32);
+
+#define COMPRESS_ROUNDS SIPROUND SIPROUND
+
+#define FINALIZE_ROUNDS SIPROUND SIPROUND SIPROUND SIPROUND
+
+typedef struct partial_hash {
+    size_t length, position;
+    uint64_t v0, v1, v2, v3;
+    uint64_t chunk; // "m_n" in the SipHash paper
+} partial_hash;
+
+partial_hash start_hash() {
+    #ifdef BIG_ENDIAN
+    fprintf(stderr, "[core/hash.h] Warning: SipHash implementation expects a little endian system, but the BIG_ENDIAN flag was set for this target.");
+    #endif
+    partial_hash h = {
+        .length = 0,
+        .position = 0,
+        .v0 = init_v0,
+        .v1 = init_v1,
+        .v2 = init_v2,
+        .v3 = init_v3,
+        .chunk = 0
+    };
+    return h;
+}
+
+partial_hash continue_hash(partial_hash partial, string s) {
+    return start_hash();// todo
+}
+
+hash resolve_hash(partial_hash partial) {
+    return partial.v0 ^ partial.v1 ^ partial.v2 ^ partial.v3;
+}
 
 hash calculate_hash(string s) {
+    #ifdef BIG_ENDIAN
+    fprintf(stderr, "[core/hash.h] Warning: SipHash implementation expects a little endian system, but the BIG_ENDIAN flag was set for this target.");
+    #endif
+
     uint8_t b = s.length % 256;
     uint64_t v0 = init_v0;
     uint64_t v1 = init_v1;
     uint64_t v2 = init_v2;
     uint64_t v3 = init_v3;
 
-    fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
-
     size_t position = 0;
     while (s.length - position > 7) {
-        uint64_t m =
-            ((uint64_t)s.data[position]) |
-            ((uint64_t)s.data[position+1] << 8) |
-            ((uint64_t)s.data[position+2] << 16) |
-            ((uint64_t)s.data[position+3] << 24) |
-            ((uint64_t)s.data[position+4] << 32) |
-            ((uint64_t)s.data[position+5] << 40) |
-            ((uint64_t)s.data[position+6] << 48) |
-            ((uint64_t)s.data[position+7] << 56);
+        uint64_t m = *(uint64_t*)&(s.data[position]);
 
         v3 ^= m;
-        fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
 
-        for (int round = 0; round < compress_rounds; ++round) {
-            // SipRound, matching formatting of specification
-            v0 += v1;            v2 += v3;
-            v1 = ROTL(v1, 13);   v3 = ROTL(v3, 16);
-            v1 ^= v0;            v3 ^= v2;
-            v0 = ROTL(v0, 32);
-            v2 += v1;            v0 += v3;
-            v1 = ROTL(v1, 17);   v3 = ROTL(v3, 21);
-            v1 ^= v2;            v3 ^= v0;
-            v2 = ROTL(v2, 32);
-        }
-        fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
+        COMPRESS_ROUNDS
 
         v0 ^= m;
-
-        fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
 
         position += 8;
     }
 
     uint64_t m = ((uint64_t)b << 56);
-    size_t byte = 0;
-    while (s.length - position > byte) {
-        m |= ((uint64_t)s.data[position+byte] << (8*byte));
-        ++byte;
-    }
+    memcpy(&m, &(s.data[position]), s.length - position);
 
     v3 ^= m;
 
-    for (int round = 0; round < compress_rounds; ++round) {
-        // SipRound, matching formatting of specification
-        v0 += v1;            v2 += v3;
-        v1 = ROTL(v1, 13);   v3 = ROTL(v3, 16);
-        v1 ^= v0;            v3 ^= v2;
-        v0 = ROTL(v0, 32);
-        v2 += v1;            v0 += v3;
-        v1 = ROTL(v1, 17);   v3 = ROTL(v3, 21);
-        v1 ^= v2;            v3 ^= v0;
-        v2 = ROTL(v2, 32);
-    }
+    COMPRESS_ROUNDS
 
     v0 ^= m;
 
     v2 ^= (uint64_t)0xff;
 
-    fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
-
-    for (int round = 0; round < finalize_rounds; ++round) {
-        // SipRound, matching formatting of specification
-        v0 += v1;            v2 += v3;
-        v1 = ROTL(v1, 13);   v3 = ROTL(v3, 16);
-        v1 ^= v0;            v3 ^= v2;
-        v0 = ROTL(v0, 32);
-        v2 += v1;            v0 += v3;
-        v1 = ROTL(v1, 17);   v3 = ROTL(v3, 21);
-        v1 ^= v2;            v3 ^= v0;
-        v2 = ROTL(v2, 32);
-    }
-
-    fprintf(stderr, " %lx %lx %lx %lx \n", v0, v1, v2, v3);
-
-    fprintf(stderr, " %lx \n", v0 ^ v1 ^ v2 ^ v3);
+    FINALIZE_ROUNDS
 
     return v0 ^ v1 ^ v2 ^ v3;
 }
-
-// TODO maybe-more-performant version ingesting one u8 at a time
 
