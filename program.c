@@ -10,23 +10,43 @@
 
 #include <crone.h>
 
-const uint8_t test_str[15] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E
-};
 
 int main() {
 
-    string s = {
-        .data = (uint8_t*)test_str,
-        .length = 15
-    };
+    string a = { .data = (uint8_t*)"apple", .length = 5 };
+    string b = { .data = (uint8_t*)"banan", .length = 5 };
+    string c = { .data = (uint8_t*)"cobra", .length = 5 };
+    string d = { .data = (uint8_t*)"delta", .length = 5 };
+    string e = { .data = (uint8_t*)"empty", .length = 5 };
+    string f = { .data = (uint8_t*)"fruit", .length = 5 };
 
-    hash h = calculate_hash(s);
+    lookup l = lookup_allocate(256, sizeof(string));
 
-    fprintf(stderr, " hash: %lx \n", h);
+    lookup_insert(l, a, compute_siphash_2_4(a), &d);
+    lookup_insert(l, b, compute_siphash_2_4(b), &e);
+    lookup_insert(l, c, compute_siphash_2_4(c), &f);
 
-    /* parser
+    string o;
+
+    if (lookup_get(l, a, compute_siphash_2_4(a), &o)) {
+        fprintf(stderr, " a: %s \n", o.data);
+    } else {
+        CRASH("fail a\n");
+    }
+    if (lookup_get(l, b, compute_siphash_2_4(b), &o)) {
+        fprintf(stderr, " b: %s \n", o.data);
+    } else {
+        CRASH("fail b\n");
+    }
+    if (lookup_get(l, c, compute_siphash_2_4(c), &o)) {
+        fprintf(stderr, " c: %s \n", o.data);
+    } else {
+        CRASH("fail c\n");
+    }
+
+    lookup_cleanup(l);
+    return 0;
+
     //int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
     int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);
 
@@ -41,7 +61,7 @@ int main() {
         CRASH("bad fstat");
     }
 
-    char *file = mmap(0, fileStat.st_size, PROT_READ, MAP_SHARED, fileDesc, 0); // TODO read docs
+    uint8_t *file = mmap(0, fileStat.st_size, PROT_READ, MAP_SHARED, fileDesc, 0); // TODO read docs
 
     if (file == NULL) {
         CRASH("bad mmap");
@@ -59,7 +79,7 @@ int main() {
     if (result == -1) {
         CRASH("bad munmap");
     }
-    */
+
 
 
     /* graphics

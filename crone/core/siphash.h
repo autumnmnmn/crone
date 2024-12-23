@@ -66,7 +66,7 @@ hash resolve_hash(partial_hash partial) {
     return partial.v0 ^ partial.v1 ^ partial.v2 ^ partial.v3;
 }
 
-hash calculate_hash(string s) {
+hash compute_siphash_2_4(string s) {
     #ifdef BIG_ENDIAN
     fprintf(stderr, "[core/hash.h] Warning: SipHash implementation expects a little endian system, but the BIG_ENDIAN flag was set for this target.");
     #endif
@@ -79,7 +79,8 @@ hash calculate_hash(string s) {
 
     size_t position = 0;
     while (s.length - position > 7) {
-        uint64_t m = *(uint64_t*)&(s.data[position]);
+        uint64_t m;
+        memcpy(&m, &(s.data[position]), 8);
 
         v3 ^= m;
 

@@ -37,10 +37,15 @@ void print_substring(uint8_t *start, size_t length) {
     }
 }
 
+typedef union custom_data {
+    uint64_t hash;
+    void *ptr;
+} custom_data;
+
 typedef struct parse {
     uint8_t *start;
     size_t length;
-    void *custom_data;
+    custom_data custom;
     list subparses;
     parser_state parsed_as;
 } parse;
@@ -59,11 +64,18 @@ void print_parse(parse p, size_t indent) {
     } else {
         fprintf(stderr, "%lu", p.subparses.count);
     }
+    if (p.parsed_as == TERM) {
+        fprintf(stderr, " #%lx", p.custom.hash % 256);
+    }
     fprintf(stderr, "]\n");
 }
 
 void transition(list *l, parse *p, uint8_t *end_position, parser_state next_state) {
     p->length = (size_t)end_position - (size_t)(p->start);
+    if (p->parsed_as == TERM) {
+        string s = { .data = p->start, .length = p->length };
+        p->custom.hash = compute_siphash_2_4(s);
+    }
     list_append(l,p);
     p->start = end_position;
     p->parsed_as = next_state;

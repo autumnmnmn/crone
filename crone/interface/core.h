@@ -6,4 +6,5 @@
 #include "core/list.h"
 #include "core/dev.h"
 #include "core/hash.h"
+#include "core/lookup.h"
 
