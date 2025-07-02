@@ -30,7 +30,8 @@ bool lookup_get(lookup l, string s, hash h, void *datum) {
     list bucket = l.buckets[h % l.capacity];
     for (size_t i = 0; i < bucket.count; ++i) {
         void *entry = list_element(bucket, i);
-        string entry_string = *(string*)entry;
+        string entry_string;
+        memcpy(&entry_string, entry, sizeof(string));
         if (match(entry_string, s)) {
             memcpy(datum, ((uint8_t*)entry) + sizeof(string), l.datum_size);
             return true;
@@ -43,13 +44,16 @@ void lookup_insert(lookup l, string s, hash h, void *datum) {
     list *bucket = &(l.buckets[h % l.capacity]);
     for (size_t i = 0; i < bucket->count; ++i) {
         void *entry = list_element(*bucket, i);
-        string entry_string = *(string*)entry;
+        string entry_string;
+        memcpy(&entry_string, entry, sizeof(string));
         if (match(entry_string, s)) {
             memcpy(((uint8_t*)entry)+sizeof(string), datum, l.datum_size);
             return;
         }
     }
 
+    // TODO when generating properly-generic versions of this, use a constant buffer size
+    // a VLA in the hash table insert operation is malpractice!!
     uint8_t buffer[sizeof(string) + l.datum_size];
 
     *(string*)buffer = s;

@@ -1,8 +1,10 @@
 
-object core {
+object corecr {
 
-    #include <stdint.h>
-    #include <stddef.h>
+    {
+        #include <stdint.h>
+        #include <stddef.h>
+    }
 
     exposed struct ptr_list {
         size_t count;
@@ -50,26 +52,29 @@ object core {
 }
 
 program example {
-    #include <stdio.h>
 
-    #include <core.h>
+    {
+        #include <stdio.h>
 
-    int main() {
+        #include <corecr.h>
 
-        ptr_list p = ptrs_allocate(10);
+        int main() {
 
-        fprintf(p.count);
-        fprintf(p.capacity);
+            ptr_list p = ptrs_allocate(10);
 
-        for (int i = 0; i < 12; ++i) {
-            ptrs_append(&p, (void*)NULL);
+            fprintf(p.count);
+            fprintf(p.capacity);
+
+            for (int i = 0; i < 12; ++i) {
+                ptrs_append(&p, (void*)NULL);
+            }
+
+            fprintf(p.count);
+            fprintf(p.capacity);
+
+            ptrs_cleanup(p);
+
         }
-
-        fprintf(p.count);
-        fprintf(p.capacity);
-
-        ptrs_cleanup(p);
-
     }
 }
 

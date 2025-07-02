@@ -3,7 +3,7 @@ typedef struct list {
     size_t count;
     size_t capacity;
     size_t element_size;
-    void* *data;
+    void *data;
 } list;
 
 list list_allocate(size_t initial_capacity, size_t element_size);

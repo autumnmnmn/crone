@@ -10,6 +10,7 @@ list list_allocate(size_t initial_capacity, size_t element_size) {
     return list;
 }
 
+// potentially invalidates pointers to entries
 void list_append(list *list, void *item) {
     list->count += 1;
     if (list->count > list->capacity) {

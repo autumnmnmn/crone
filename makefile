@@ -9,12 +9,13 @@ PROJECT_NAME = crone
 
 LINKS = -lX11 -lvulkan
 HEADERS = -I $(PROJECT_NAME)/interface
-ERRORS = -Wfatal-errors -Wall -Werror=use-after-free -Wno-unused-variable -Wpedantic
+ERRORS = -Wfatal-errors -Wall -Wextra -Werror=use-after-free -Wno-unused-variable -Wpedantic
 %_dev: VERSION_FLAGS = -Og -DDO_VALIDATION -fsanitize=address,undefined
 %_release: VERSION_FLAGS = -O3
 FLAGS = -std=c23 $(ERRORS) $(VERSION_FLAGS) $(HEADERS) -DUSE_X11
 
 GCC = gcc $(FLAGS) -o
+NVCC = nvcc -Xcompiler $(FLAGS) -o
 
 define MAKE_OBJECT
 	@echo "[makefile] making $@"

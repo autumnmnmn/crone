@@ -12,43 +12,8 @@
 
 
 int main() {
-
-    string a = { .data = (uint8_t*)"apple", .length = 5 };
-    string b = { .data = (uint8_t*)"banan", .length = 5 };
-    string c = { .data = (uint8_t*)"cobra", .length = 5 };
-    string d = { .data = (uint8_t*)"delta", .length = 5 };
-    string e = { .data = (uint8_t*)"empty", .length = 5 };
-    string f = { .data = (uint8_t*)"fruit", .length = 5 };
-
-    lookup l = lookup_allocate(256, sizeof(string));
-
-    lookup_insert(l, a, compute_siphash_2_4(a), &d);
-    lookup_insert(l, b, compute_siphash_2_4(b), &e);
-    lookup_insert(l, c, compute_siphash_2_4(c), &f);
-
-    string o;
-
-    if (lookup_get(l, a, compute_siphash_2_4(a), &o)) {
-        fprintf(stderr, " a: %s \n", o.data);
-    } else {
-        CRASH("fail a\n");
-    }
-    if (lookup_get(l, b, compute_siphash_2_4(b), &o)) {
-        fprintf(stderr, " b: %s \n", o.data);
-    } else {
-        CRASH("fail b\n");
-    }
-    if (lookup_get(l, c, compute_siphash_2_4(c), &o)) {
-        fprintf(stderr, " c: %s \n", o.data);
-    } else {
-        CRASH("fail c\n");
-    }
-
-    lookup_cleanup(l);
-    return 0;
-
-    //int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
-    int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);
+    int fileDesc = open("./crone/core/core.cr", O_RDONLY, 0);
+    //int fileDesc = open("./crone/lang/parseme.cr", O_RDONLY, 0);
 
     if (fileDesc == -1) {
         CRASH("bad file");
@@ -82,7 +47,7 @@ int main() {
 
 
 
-    /* graphics
+    ///* graphics
     window_handle window = window_getWindow();
 
     vulkan_handle vk = vulkan_init();

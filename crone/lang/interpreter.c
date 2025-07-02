@@ -43,8 +43,7 @@ typedef union custom_data {
 } custom_data;
 
 typedef struct parse {
-    uint8_t *start;
-    size_t length;
+    string source;
     custom_data custom;
     list subparses;
     parser_state parsed_as;
@@ -60,38 +59,44 @@ void print_parse(parse p, size_t indent) {
     fwrite(spaces, 1, space_count, stderr);
     fprintf(stderr, "%s[", state_names[p.parsed_as]);
     if (p.parsed_as != BLOCK) {
-        print_substring(p.start, p.length);
+        print_substring(p.source.data, p.source.length);
     } else {
         fprintf(stderr, "%lu", p.subparses.count);
     }
+    fprintf(stderr, "]");
     if (p.parsed_as == TERM) {
         fprintf(stderr, " #%lx", p.custom.hash % 256);
     }
-    fprintf(stderr, "]\n");
+    fprintf(stderr, "\n");
 }
 
-void transition(list *l, parse *p, uint8_t *end_position, parser_state next_state) {
-    p->length = (size_t)end_position - (size_t)(p->start);
+void transition(list *l, parse *p, uint8_t *end_position, parser_state next_state, lookup meanings) {
+    p->source.length = (size_t)end_position - (size_t)(p->source.data);
     if (p->parsed_as == TERM) {
-        string s = { .data = p->start, .length = p->length };
-        p->custom.hash = compute_siphash_2_4(s);
+        p->custom.hash = compute_siphash_2_4(p->source);
+        uint8_t m = 1;
+        if (lookup_get(meanings, p->source, p->custom.hash, &m)) {
+            ++m;
+        }
+        lookup_insert(meanings, p->source, p->custom.hash, &m);
     }
     list_append(l,p);
-    p->start = end_position;
+    p->source.data = end_position;
     p->parsed_as = next_state;
 }
 
 // TODO UNICODE
 
-list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
+list/*subparses*/ parse_crone(string crone_script, size_t *p_position, lookup meanings) {
     list parses = list_allocate(128, sizeof(parse));
 
     parse current_parse;
+    parse *dominant_term = NULL;
 
-    current_parse.start = crone_script.data + (*p_position);
+    current_parse.source.data = crone_script.data + (*p_position);
     current_parse.parsed_as = OUTER_SPACE;
 
-    #define NEXT(state) transition(&parses, &current_parse, crone_script.data + (*p_position), state)
+    #define NEXT(state) transition(&parses, &current_parse, crone_script.data + (*p_position), state, meanings)
 
     // optimize w/ computed goto?
 
@@ -134,7 +139,7 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
             break;
             case BLOCK:
                 // TODO parsing for block dependent on term and prelude
-                current_parse.subparses = parse_crone(crone_script, p_position);
+                current_parse.subparses = parse_crone(crone_script, p_position, meanings);
                 NEXT(OUTER_SPACE);
             break;
             case PUNCTUATION:
@@ -165,19 +170,19 @@ list/*subparses*/ parse_crone(string crone_script, size_t *p_position) {
 }
 
 void print_parses(list parses, int indent) {
-    for (int i = 0; i < parses.count; ++i) {
+    for (size_t i = 0; i < parses.count; ++i) {
         parse p = *(parse*)list_element(parses, i);
-        //if (p.parsed_as != OUTER_SPACE && p.parsed_as != INNER_SPACE) {
+        if (p.parsed_as != OUTER_SPACE && p.parsed_as != INNER_SPACE) {
             print_parse(p, indent);
             if (p.parsed_as == BLOCK) {
                 print_parses(p.subparses, indent + 1);
             }
-        //}
+        }
     }
 }
 
 void cleanup_parses(list parses) {
-    for (int i = 0; i < parses.count; ++i) {
+    for (size_t i = 0; i < parses.count; ++i) {
         parse p = *(parse*)list_element(parses, i);
         if (p.parsed_as == BLOCK) {
             cleanup_parses(p.subparses);
@@ -187,8 +192,10 @@ void cleanup_parses(list parses) {
 }
 
 void execute_crone(string crone_script) {
+    lookup meanings = lookup_allocate(128, sizeof(uint8_t));
+
     size_t position = 0;
-    list parses = parse_crone(crone_script, &position);
+    list parses = parse_crone(crone_script, &position, meanings);
 
     print_parses(parses, 0);
 
@@ -199,5 +206,17 @@ void execute_crone(string crone_script) {
     cleanup_parses(parses);
 
     fprintf(stderr, "parse size = %lu\n", sizeof(parse));
+
+    for (size_t i = 0; i < meanings.capacity; ++i) {
+        fprintf(stderr, " - - - - - - - - - - %lu entries\n", meanings.buckets[i].count);
+        for (size_t j = 0; j < meanings.buckets[i].count; ++j) {
+            uint8_t *elem = list_element(meanings.buckets[i], j);
+            string s;
+            memcpy(&s, elem, sizeof(string));
+            fprintf(stderr, "\"%.*s\": %u\n", (int)s.length, s.data, (char)elem[sizeof(string)]);
+        }
+    }
+
+    lookup_cleanup(meanings);
 }
 

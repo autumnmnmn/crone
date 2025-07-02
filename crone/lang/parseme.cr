@@ -1,4 +1,23 @@
 
+last term before the block decides how the block will be parsed;
+
+for example, in "verbatim { block }", the parser checks for a "verbatim" subparser and, if it exists, uses it.
+
+in "trimmed verbatim {block}", the verbatim subparser could perhaps check for modifiers such as "trimmed".
+
+parse priority (lowest first)
+
+3 2 1 0 { 4 }
+
+parse-time-meaningless terms may have interpret-time meanings.
+
+there are many "times":
+
+parse time - execute while parsing
+interpret time - execute after everything is parsed
+phoenix time - execute after having already run everything else & restarted, assuming everything has run successfully
+
+
 term0 term1      term2 term3 {
     block block
 

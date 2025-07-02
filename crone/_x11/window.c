@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -69,7 +70,8 @@ void window_pollEvents(void *window_void) {
     XEvent event;
 
     while (XCheckTypedWindowEvent(window -> display, window -> window, ClientMessage, &event)) {
-        if (event.xclient.data.l[0] == window -> wmDeleteMessage) {
+        assert(event.xclient.data.l[0] >= 0);
+        if (((Atom) event.xclient.data.l[0]) == window -> wmDeleteMessage) {
             fprintf(stderr, "[_x11/window.c] window close requested\n");
             window -> shouldClose = true;
         }
